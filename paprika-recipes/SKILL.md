@@ -4,7 +4,7 @@ description: Create .paprikarecipes import files for the Paprika Recipe Manager 
 compatibility: Python 3 with pip; installs the paprika-recipes package (3.x) from PyPI.
 ---
 
-# Paprika recipe export
+# Paprika Recipes
 
 Paprika imports a `.paprikarecipes` file: a zip archive in which each entry is one recipe
 as gzip-compressed JSON, named after the recipe. Building that by hand looks easy and
@@ -12,6 +12,45 @@ isn't. Hand-built files that parse fine on a desktop have crashed the iOS app, b
 missing fields, wrong field types, a stale hash, or a zip entry name that doesn't match the
 recipe name (apostrophes are a common culprit). So don't hand-roll the format: use the
 `paprika-recipes` library, which writes files the app accepts, through the bundled script.
+
+## When to Use This Skill
+
+- The user wants a recipe "in Paprika", or asks to save, export or import recipes into Paprika
+- The user mentions a .paprikarecipe or .paprikarecipes file, even misspelled
+- The user wants several recipes bundled into one import file, from chat, a photo, a PDF,
+  a web page or past conversations
+- The user wants to read, inspect or edit an existing .paprikarecipes file
+
+## What This Skill Does
+
+1. **Builds import files**: Writes `.paprikarecipes` archives with the `paprika-recipes`
+   library, so they import on iOS, Android, Mac and Windows.
+2. **Validates input**: Reports every problem in the recipe data at once (missing
+   fields, bad ratings, broken JSON, empty input).
+3. **Makes entry names safe**: Handles slashes, very long names and duplicate recipe names.
+4. **Verifies the output**: Reopens the archive and checks every entry's gzip format,
+   required fields, round-trip text and hash. Writes nothing if a check fails.
+5. **Reads and edits archives**: Opens an existing file so recipes can be inspected,
+   changed and rebuilt.
+
+## How to Use
+
+### Basic Usage
+
+```
+Put this recipe in Paprika: [pasted recipe, photo or link]
+```
+
+### Advanced Usage
+
+```
+Bundle all my soup recipes from our past conversations into one Paprika file,
+with the category "Soups"
+```
+
+```
+Add the category "Weeknight" to every recipe in this .paprikarecipes file
+```
 
 ## Workflow
 
@@ -57,7 +96,22 @@ are required; leave anything unknown empty rather than inventing it (especially
 | `rating` | Whole number 0–5 (0 = unrated). |
 | `nutritional_info` | Only if actually provided. |
 
-## Writing good Paprika recipes
+## Example
+
+**User**: "Bundle my soup recipes into one Paprika file"
+
+**Output**: Claude finds the recipes, lists them for the user to check, writes them to
+`recipes.json`, and runs the builder:
+```
+OK: wrote 3 recipe(s) to /mnt/user-data/outputs/Soups.paprikarecipes
+  - Weeknight Lentil Soup
+  - Tomato Basil Soup
+  - Chicken Tortilla Soup
+```
+The user gets `Soups.paprikarecipes` and imports it with File → Import on desktop, or
+by tapping it and choosing Paprika on iPhone or iPad.
+
+## Tips
 
 - Put everything the cook needs in the recipe itself. Paprika is used at the stove,
   often on a phone, so storage, make-ahead and appliance tips belong in `notes`.
@@ -84,3 +138,10 @@ with open("edited.paprikarecipes", "wb") as f:
 ```
 Or dump the recipes to the JSON input format and rebuild with the script, which also
 verifies the result.
+
+## Common Use Cases
+
+- Saving a recipe from a chat, photo, cookbook page or website into Paprika
+- Moving a collection of recipes into Paprika in one import
+- Bulk-editing categories or other fields in an existing Paprika export
+- Checking what's inside a .paprikarecipes file before importing it
