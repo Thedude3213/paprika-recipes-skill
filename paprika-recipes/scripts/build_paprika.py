@@ -94,25 +94,33 @@ def entry_name(recipe, used: set) -> str:
     return name
 
 
+def check(ok, message: str) -> None:
+    """Like assert, but not skipped when Python runs with -O."""
+    if not ok:
+        raise ValueError(message)
+
+
 def verify(path: str, recipes: list) -> None:
     with ZipFile(path) as z:
         infos = z.infolist()
-        assert len(infos) == len(recipes), f"archive has {len(infos)} entries, expected {len(recipes)}"
+        check(len(infos) == len(recipes), f"archive has {len(infos)} entries, expected {len(recipes)}")
         for info, orig in zip(infos, recipes):
             raw = z.read(info)
-            assert raw[:2] == b"\x1f\x8b", f"{info.filename}: entry is not gzip-compressed"
+            check(raw[:2] == b"\x1f\x8b", f"{info.filename}: entry is not gzip-compressed")
             data = json.loads(gzip.decompress(raw).decode("utf-8"))
             for k in ("uid", "name", "ingredients", "directions", "hash", "created", "categories"):
-                assert k in data, f"{info.filename}: missing '{k}'"
-            assert data["name"] == orig.name, f"{info.filename}: name changed on round trip"
-            assert data["ingredients"] == orig.ingredients, f"{orig.name}: ingredients changed"
-            assert data["directions"] == orig.directions, f"{orig.name}: directions changed"
-            assert data["hash"] == orig.calculate_hash(), f"{orig.name}: stale hash"
+                check(k in data, f"{info.filename}: missing '{k}'")
+            check(data["name"] == orig.name, f"{info.filename}: name changed on round trip")
+            check(data["ingredients"] == orig.ingredients, f"{orig.name}: ingredients changed")
+            check(data["directions"] == orig.directions, f"{orig.name}: directions changed")
+            check(data["hash"] == orig.calculate_hash(), f"{orig.name}: stale hash")
     with open(path, "rb") as f:  # and the library's own reader agrees
-        assert len(list(Archive.from_file(f).recipes)) == len(recipes)
+        check(len(list(Archive.from_file(f).recipes)) == len(recipes), "library reader disagrees on recipe count")
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):  # e.g. emoji names on a Windows console
+        stream.reconfigure(errors="replace")
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     src, out = sys.argv[1], sys.argv[2]
