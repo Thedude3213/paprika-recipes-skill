@@ -1,6 +1,6 @@
 ---
 name: paprika-recipes
-description: Create .paprikarecipes (or single .paprikarecipe) import files for the Paprika Recipe Manager app (iOS, Android, Mac, Windows). Use this skill whenever the user wants a recipe "in Paprika", asks to export, save, or import recipes into Paprika, mentions .paprikarecipe / .paprikarecipes (including misspellings like "paprikarecipie"), or wants to bundle several recipes from chat, a photo, a PDF, a web page, or past conversations into one Paprika import file. Also use it to read or inspect an existing .paprikarecipes file.
+description: Create .paprikarecipes import files for the Paprika Recipe Manager app (iOS, Android, Mac, Windows). Use this skill whenever the user wants a recipe "in Paprika", asks to export, save, or import recipes into Paprika, mentions .paprikarecipe / .paprikarecipes (including misspellings like "paprikarecipie"), or wants to bundle several recipes from chat, a photo, a PDF, a web page, or past conversations into one Paprika import file. Also use it to read or inspect an existing .paprikarecipes file.
 compatibility: Python 3 with pip; installs the paprika-recipes package (3.x) from PyPI.
 ---
 
@@ -33,8 +33,8 @@ recipe name (apostrophes are a common culprit). So don't hand-roll the format: u
 4. **Deliver the file** and give brief import steps: on desktop, File → Import; on
    iPhone/iPad, tap the file and use Share / Open In → Paprika.
 
-Default to one `.paprikarecipes` archive, even for a single recipe, since every Paprika
-platform imports it. Only produce a bare `.paprikarecipe` if the user asks for that.
+Always produce one `.paprikarecipes` archive, even for a single recipe, since every
+Paprika platform imports it.
 
 ## Recipe fields
 
