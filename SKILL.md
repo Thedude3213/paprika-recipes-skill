@@ -1,0 +1,86 @@
+---
+name: paprika-recipes
+description: Create .paprikarecipes (or single .paprikarecipe) import files for the Paprika Recipe Manager app (iOS, Android, Mac, Windows). Use this skill whenever the user wants a recipe "in Paprika", asks to export, save, or import recipes into Paprika, mentions .paprikarecipe / .paprikarecipes (including misspellings like "paprikarecipie"), or wants to bundle several recipes from chat, a photo, a PDF, a web page, or past conversations into one Paprika import file. Also use it to read or inspect an existing .paprikarecipes file.
+compatibility: Python 3 with pip; installs the paprika-recipes package (3.x) from PyPI.
+---
+
+# Paprika recipe export
+
+Paprika imports a `.paprikarecipes` file: a zip archive in which each entry is one recipe
+as gzip-compressed JSON, named after the recipe. Building that by hand looks easy and
+isn't. Hand-built files that parse fine on a desktop have crashed the iOS app, because of
+missing fields, wrong field types, a stale hash, or a zip entry name that doesn't match the
+recipe name (apostrophes are a common culprit). So don't hand-roll the format: use the
+`paprika-recipes` library, which writes files the app accepts, through the bundled script.
+
+## Workflow
+
+1. **Gather the recipes.** Pull them from wherever the user pointed: the chat, an image,
+   a document, a web page, or past conversations. If the user asks for "all my X recipes",
+   search broadly and tell them which ones you found, so they can spot a missing one.
+2. **Write a JSON input file** (a list of recipe objects; fields below).
+3. **Run the builder:**
+   ```bash
+   pip install 'paprika-recipes>=3,<4' --break-system-packages -q
+   python <this-skill-dir>/scripts/build_paprika.py recipes.json "/mnt/user-data/outputs/My Recipes.paprikarecipes"
+   ```
+   `<this-skill-dir>` is the folder this SKILL.md lives in. The script validates the
+   input, builds every recipe with a fresh hash, writes the archive, then reopens it and
+   checks each entry (gzip format, required fields, round-trip text, hash). If anything is
+   wrong it prints every problem at once and writes no file, so fix the JSON and rerun;
+   never patch the output by hand. Warnings (unknown fields, unusual difficulty) don't
+   stop the build but are worth a look.
+4. **Deliver the file** and give brief import steps: on desktop, File → Import; on
+   iPhone/iPad, tap the file and use Share / Open In → Paprika.
+
+Default to one `.paprikarecipes` archive, even for a single recipe, since every Paprika
+platform imports it. Only produce a bare `.paprikarecipe` if the user asks for that.
+
+## Recipe fields
+
+All values are strings unless noted. Only `name`, `ingredients` and `directions`
+are required; leave anything unknown empty rather than inventing it (especially
+`nutritional_info` and `source_url`).
+
+| Field | Notes |
+|---|---|
+| `name` | Recipe title. Also becomes the zip entry name; the script makes slashes, very long names and duplicate names safe automatically. |
+| `description` | One or two sentences. |
+| `ingredients` | A string or a list of lines. One ingredient per line, `\n`-separated, quantity first ("1 cup steel-cut oats"). Paprika scales these, so keep numbers as numbers. Section headers go on their own line. |
+| `directions` | One step per line or paragraph. Numbering ("1. …") is optional. |
+| `notes` | Tips, variations, storage, substitutions. Blank lines are fine. |
+| `servings` | e.g. "4" or "12 bars". |
+| `prep_time`, `cook_time`, `total_time` | Free text, e.g. "10 min", "1 hr 15 min". |
+| `difficulty` | "Easy", "Medium" or "Hard". |
+| `categories` | List of strings (a comma-separated string also works). Paprika creates missing categories on import. |
+| `source`, `source_url` | Where the recipe came from, if known. |
+| `rating` | Whole number 0–5 (0 = unrated). |
+| `nutritional_info` | Only if actually provided. |
+
+## Writing good Paprika recipes
+
+- Put everything the cook needs in the recipe itself. Paprika is used at the stove,
+  often on a phone, so storage, make-ahead and appliance tips belong in `notes`.
+- Keep ingredient lines clean and scalable: "2 tbsp butter, softened", not "some butter".
+- Match the user's existing category names when you know them, so imports land where
+  they expect.
+- If the user states dietary rules (allergies, no added salt for a baby, etc.), keep
+  them in the recipe text so they travel with it.
+
+## Reading an existing file
+
+```python
+from paprika_recipes.archive import Archive
+with open("file.paprikarecipes", "rb") as f:
+    archive = Archive.from_file(f)
+for r in archive.recipes:
+    print(r.name, r.categories)
+```
+To change recipes, edit them, call `update_hash()` on each one you changed, and write
+a new archive:
+```python
+with open("edited.paprikarecipes", "wb") as f:
+    archive.as_paprikarecipes(f)
+```
+Or dump the recipes to the JSON input format and rebuild with the script, which also
+verifies the result.
